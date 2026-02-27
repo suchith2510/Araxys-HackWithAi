@@ -54,7 +54,7 @@ class AnalysisResponse(BaseModel):
 
     # ── AI reasoning fields ──────────────────────────────────────────────────
     summary: str = Field(
-        ..., description="4–6 sentence patient-friendly explanation of results"
+        ..., description="6–8 patient-friendly key points explaining the results"
     )
     preventive_guidance: str = Field(
         ..., description="Lifestyle-based, non-diagnostic preventive tips"
