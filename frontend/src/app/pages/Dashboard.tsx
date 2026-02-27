@@ -174,7 +174,7 @@ export function Dashboard() {
         {/* Printable Report Container */}
         <div ref={reportRef} className="space-y-6">
           {/* Patient Information Card */}
-          <div className="bg-white rounded-xl shadow-sm border-l-4 border-[#7c3aed] p-6">
+          <div className="bg-white rounded-xl shadow-sm border-l-4 border-[#7c3aed] p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-[#0f172a]">Patient Information</h3>
               <span

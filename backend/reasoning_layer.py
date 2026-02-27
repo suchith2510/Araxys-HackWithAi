@@ -62,9 +62,11 @@ STRICT RULES:
 5. Preventive guidance must be lifestyle-only: diet, exercise, hydration, sleep, stress.
 6. Do NOT recommend specific medications or supplements by brand name.
 7. Be empathetic, clear, and reassuring in tone.
-8. The 'summary' field MUST be formatted as a JSON array of strings.
-9. Use extremely simple, non-technical language (6th-grade reading level) that anyone can understand without a medical background.
-10. Return ONLY a valid JSON object — no markdown, no code fences, no extra text.
+8. The "summary" field MUST be a single string formatted with `\\n` newline characters to create a list of 6-7 SHORT and SIMPLE key points.
+   - Keep each bullet point to a single, concise sentence.
+   - Avoid long, complex medical explanations.
+   - Start each point with a bolded category like "**Overview:** ".
+9. Return ONLY a valid JSON object — no markdown, no code fences, no extra text.
 """
 
 _USER_PROMPT_TEMPLATE = """\
@@ -87,16 +89,8 @@ Write a response for the patient strictly in {language} using ONLY the JSON stru
 Do not add any text before or after the JSON.
 
 {{
-  "summary": [
-    "<A very simple, non-technical breakdown of the results.>",
-    "<Explain what the abnormal parameters mean in everyday language. Mention names and values.>",
-    "<Use cautious language.>"
-  ],
-  "preventive_guidance": [
-    "<At least 3 specific, actionable lifestyle tips directly relevant to the flagged parameters.>",
-    "<Each tip must be on its own line.>",
-    "<No diagnoses. No medications.>"
-  ],
+  "summary": "- **Overview:** <Short, simple 1-sentence point>\\n- **Key Concerns:** <Short, simple 1-sentence point>\\n- **Next Steps:** <Short, simple 1-sentence point>\\n- **<Category>:** <Short point>\\n- **<Category>:** <Short point>\\n- **<Category>:** <Short point>",
+  "preventive_guidance": "<Single paragraph of 3 to 5 specific, actionable lifestyle tips directly relevant to the flagged parameters. No diagnoses. No medications.>",
   "doctor_questions": [
     "<Targeted question about the most concerning abnormal value>",
     "<Question about lifestyle or diet changes specific to the patient's flagged results>",
