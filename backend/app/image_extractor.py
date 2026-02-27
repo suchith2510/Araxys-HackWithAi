@@ -21,8 +21,8 @@ from langchain_groq import ChatGroq
 
 logger = logging.getLogger(__name__)
 
-# Vision model on Groq — fast, free-tier eligible
-VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
+# Vision model on Groq
+VISION_MODEL = "meta-llama/llama-4-maverick-17b-128e-instruct"
 
 _EXTRACTION_PROMPT = """\
 This image is a medical lab report. Your task is to read and extract ALL visible text from it exactly as it appears.
