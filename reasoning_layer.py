@@ -366,7 +366,7 @@ class LabReportReasoningAgent:
 
         # ── Step 2: Build prompt ──────────────────────────────────────────
         messages = self._build_prompt(patient_name, report_date, parameters, rag_context)
-        logger.info("Sending request to OpenAI…")
+        logger.info("Sending request to Groq…")
 
         # ── Step 3: Single LLM call ───────────────────────────────────────
         response = self._llm.invoke(messages)
