@@ -163,8 +163,8 @@ export function TrendAnalysis() {
                       <td className="px-6 py-4 font-mono text-[#64748b]">
                         {item.older_value}
                         <span className={`ml-2 text-xs inline-block px-1.5 py-0.5 rounded ${item.older_status === "Normal"
-                            ? "bg-[#22c55e]/10 text-[#22c55e]"
-                            : "bg-[#ef4444]/10 text-[#ef4444]"
+                          ? "bg-[#22c55e]/10 text-[#22c55e]"
+                          : "bg-[#ef4444]/10 text-[#ef4444]"
                           }`}>
                           {item.older_status}
                         </span>
@@ -172,8 +172,8 @@ export function TrendAnalysis() {
                       <td className={`px-6 py-4 font-mono ${newerBg}`}>
                         {item.newer_value}
                         <span className={`ml-2 text-xs inline-block px-1.5 py-0.5 rounded ${item.newer_status === "Normal"
-                            ? "bg-[#22c55e]/10 text-[#22c55e]"
-                            : "bg-[#ef4444]/10 text-[#ef4444]"
+                          ? "bg-[#22c55e]/10 text-[#22c55e]"
+                          : "bg-[#ef4444]/10 text-[#ef4444]"
                           }`}>
                           {item.newer_status}
                         </span>
@@ -243,7 +243,7 @@ export function TrendAnalysis() {
             </h2>
             <div className="flex justify-center">
               <img
-                src={`data:image/png;base64,${graph_base64}`}
+                src={graph_base64}
                 alt="Lab parameter trend graph"
                 className="rounded-lg max-w-full"
                 style={{ maxHeight: "480px" }}
