@@ -30,7 +30,7 @@ import logging
 import os
 from typing import Any
 
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_groq import ChatGroq
 
 from rag_pipeline import RAGPipeline
@@ -201,7 +201,7 @@ class LabReportReasoningAgent:
 
     Workflow
     --------
-    1. Validate OPENAI_API_KEY is set (raises RuntimeError otherwise).
+    1. Validate GROQ_API_KEY is set (raises RuntimeError otherwise).
     2. Build FAISS RAG index from the medical knowledge base.
     3. On analyze():
        a. Identify abnormal parameters from the report JSON.
@@ -209,7 +209,7 @@ class LabReportReasoningAgent:
        c. Retrieve top-k relevant document chunks from FAISS.
        d. Log retrieved snippets for debugging.
        e. Format the full LLM prompt (system + user).
-       f. Call ChatOpenAI once (single completion).
+       f. Call ChatGroq once (single completion).
        g. Parse and return the structured JSON response.
 
     Parameters
@@ -217,7 +217,7 @@ class LabReportReasoningAgent:
     knowledge_file : str
         Path to the plain-text medical knowledge base.
     model : str
-        OpenAI chat model to use (default: "gpt-4o-mini").
+        Groq model to use (default: "llama-3.3-70b-versatile").
     temperature : float
         Sampling temperature — lower is more deterministic (default: 0.2).
     top_k : int
@@ -295,7 +295,7 @@ class LabReportReasoningAgent:
         rag_context: str,
     ) -> list:
         """
-        Assemble the [system, user] message list for ChatOpenAI.
+        Assemble the [SystemMessage, HumanMessage] list for ChatGroq.
         """
         results_table    = _build_results_table(parameters)
         abnormal_summary = _build_abnormal_summary(parameters)
@@ -309,8 +309,8 @@ class LabReportReasoningAgent:
         )
 
         return [
-            {"role": "system", "content": _SYSTEM_PROMPT},
-            {"role": "user",   "content": user_content},
+            SystemMessage(content=_SYSTEM_PROMPT),
+            HumanMessage(content=user_content),
         ]
 
     # ──────────────────────────────────────────────────────────────────────
@@ -366,7 +366,7 @@ class LabReportReasoningAgent:
 
         # ── Step 2: Build prompt ──────────────────────────────────────────
         messages = self._build_prompt(patient_name, report_date, parameters, rag_context)
-        logger.info("Sending request to OpenAI…")
+        logger.info("Sending request to Groq…")
 
         # ── Step 3: Single LLM call ───────────────────────────────────────
         response = self._llm.invoke(messages)
