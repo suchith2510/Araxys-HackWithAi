@@ -1,0 +1,17 @@
+# AI Health Insight Companion — Python Dependencies
+# Install with: pip install -r requirements.txt
+
+# LangChain core
+langchain>=0.3.0
+langchain-core>=0.3.0
+langchain-community>=0.3.0
+langchain-openai>=0.2.0
+
+# OpenAI SDK (used by langchain-openai)
+openai>=1.40.0
+
+# FAISS — vector store for RAG
+faiss-cpu>=1.8.0
+
+# Utility
+python-dotenv>=1.0.0        # load OPENAI_API_KEY from .env file
