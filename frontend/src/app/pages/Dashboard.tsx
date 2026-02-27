@@ -13,6 +13,8 @@ import {
   TrendingUp,
   CheckCircle,
   Download,
+  Volume2,
+  Loader2,
 } from "lucide-react";
 import { Navbar } from "../components/Navbar";
 import { Link } from "react-router";
@@ -39,11 +41,14 @@ const defaultLabData: LabParameter[] = [
   { name: "Vitamin D", value: 22, unit: "ng/mL", reference_low: 30, reference_high: 100, status: "Low" },
 ];
 
+const API_BASE = ""; // Proxy handles /api
+
 export function Dashboard() {
   const [labData, setLabData] = useState<LabParameter[]>(defaultLabData);
   const [patientName, setPatientName] = useState("John Anderson");
   const [reportDate, setReportDate] = useState("Feb 20, 2026");
   const [summary, setSummary] = useState("");
+  const [intellectualAudio, setIntellectualAudio] = useState("");
   const [preventiveGuidance, setPreventiveGuidance] = useState("");
   const [doctorQuestions, setDoctorQuestions] = useState<string[]>([]);
   const [hasTrendData, setHasTrendData] = useState(false);
@@ -51,10 +56,19 @@ export function Dashboard() {
   const [isCopied, setIsCopied] = useState(false);
   const [fromApi, setFromApi] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+
+  // Audio state
+  const [language, setLanguage] = useState("English");
+  const [isAudioLoading, setIsAudioLoading] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
 
   // Load API response (AnalysisResponse) from localStorage set by Upload page
   useEffect(() => {
+    const storedLang = localStorage.getItem("selectedLanguage");
+    if (storedLang) setLanguage(storedLang);
+
     const stored = localStorage.getItem("labReportData");
     if (stored) {
       try {
@@ -65,6 +79,7 @@ export function Dashboard() {
           setLabData(data.parameters);
         }
         if (data.summary) setSummary(data.summary);
+        if (data.intellectual_audio) setIntellectualAudio(data.intellectual_audio);
         if (data.preventive_guidance) setPreventiveGuidance(data.preventive_guidance);
         if (Array.isArray(data.doctor_questions) && data.doctor_questions.length > 0) {
           setDoctorQuestions(data.doctor_questions);
@@ -106,6 +121,55 @@ export function Dashboard() {
     // We use the browser's native print functionality which seamlessly handles oklab/oklch colors
     // and layout formatting better than html2canvas for modern Tailwind CSS.
     window.print();
+  };
+
+  const handlePlaySummaryAudio = async () => {
+    const AudioScript = intellectualAudio || summary; // Fallback for old data
+    if (!AudioScript) return;
+
+    // Toggle playback if already loaded and playing
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+        setIsPlaying(false);
+        return;
+      }
+    }
+
+    setIsAudioLoading(true);
+    try {
+      // Create fresh audio object if none exists or we want to replay
+      const response = await fetch(`${API_BASE}/api/v1/tts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: AudioScript.replace(/[\*\#\[\]\\]/g, " "), // Remove remaining raw markdown symbols if any slip through
+          language: language,
+        }),
+      });
+
+      if (!response.ok) throw new Error("TTS request failed");
+
+      const blob = await response.blob();
+      const audioUrl = URL.createObjectURL(blob);
+      const audio = new Audio(audioUrl);
+
+      audio.onended = () => setIsPlaying(false);
+      audio.onerror = () => {
+        setIsPlaying(false);
+        toast.error("Error playing audio stream.");
+      };
+
+      audioRef.current = audio;
+      audio.play();
+      setIsPlaying(true);
+    } catch (error) {
+      console.error("Audio generation error:", error);
+      toast.error("Failed to generate audio summary.");
+    } finally {
+      setIsAudioLoading(false);
+    }
   };
 
   return (
@@ -311,10 +375,24 @@ export function Dashboard() {
             <div className="bg-[#7c3aed]/5 rounded-xl border border-[#7c3aed]/20 overflow-hidden">
               <div className="bg-[#7c3aed] px-6 py-4 flex items-center justify-between">
                 <h3 className="font-bold text-white">What Your Results Mean</h3>
-                <span className="inline-flex items-center gap-1 bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-medium text-white">
-                  <Sparkles className="w-3 h-3" />
-                  AI Generated
-                </span>
+                <div className="flex gap-2 items-center print:hidden">
+                  <button
+                    onClick={handlePlaySummaryAudio}
+                    disabled={isAudioLoading || !summary}
+                    className="inline-flex items-center gap-1.5 bg-white/20 hover:bg-white/30 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs font-semibold text-white transition-all disabled:opacity-50"
+                  >
+                    {isAudioLoading ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Volume2 className={`w-3.5 h-3.5 ${isPlaying ? 'animate-pulse text-[#d8b4fe]' : ''}`} />
+                    )}
+                    {isPlaying ? "Stop Audio" : "Play Audio"}
+                  </button>
+                  <span className="inline-flex items-center gap-1 bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs font-medium text-white">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    AI Generated
+                  </span>
+                </div>
               </div>
               <div className="p-6">
                 {summary ? (

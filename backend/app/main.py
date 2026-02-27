@@ -11,7 +11,7 @@ Interactive docs:
 import logging
 
 from dotenv import load_dotenv
-load_dotenv()  # loads GROQ_API_KEY (and others) from .env automatically
+load_dotenv(override=True)  # force load GROQ_API_KEY (and others) from .env on script reloads
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware

@@ -212,6 +212,7 @@ export function Upload() {
         localStorage.removeItem("trendData");
       }
 
+      localStorage.setItem("selectedLanguage", language);
       setProgress(100);
       setTimeout(() => navigate("/dashboard"), 500);
     } catch {

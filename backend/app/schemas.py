@@ -10,6 +10,11 @@ from typing import List, Literal
 from pydantic import BaseModel, Field
 
 
+class TTSRequest(BaseModel):
+    """Payload for generating Text-to-Speech audio."""
+    text: str = Field(..., description="The text to convert to speech")
+    language: str = Field("English", description="The language of the text")
+
 class LabParameter(BaseModel):
     """A single lab test result extracted from the report."""
 
@@ -55,6 +60,9 @@ class AnalysisResponse(BaseModel):
     # ── AI reasoning fields ──────────────────────────────────────────────────
     summary: str = Field(
         ..., description="6–8 patient-friendly key points explaining the results"
+    )
+    intellectual_audio: str = Field(
+        ..., description="A beautiful, conversational paragraph meant for TTS voice-over."
     )
     preventive_guidance: str = Field(
         ..., description="Lifestyle-based, non-diagnostic preventive tips"

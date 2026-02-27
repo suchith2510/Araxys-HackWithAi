@@ -66,7 +66,8 @@ STRICT RULES:
    - Keep each bullet point to a single, concise sentence.
    - Avoid long, complex medical explanations.
    - Start each point with a bolded category like "**Overview:** ".
-9. Return ONLY a valid JSON object — no markdown, no code fences, no extra text.
+9. The "intellectual_audio" field MUST be a beautiful, highly intelligent, continuous and compassionate conversational paragraph explaining the summary points without ANY list markers, bullet points, numbers, or markdown whatsoever. It is designed to be spoken aloud.
+10. Return ONLY a valid JSON object — no extra text.
 """
 
 _USER_PROMPT_TEMPLATE = """\
@@ -90,6 +91,7 @@ Do not add any text before or after the JSON.
 
 {{
   "summary": "- **Overview:** <Short, simple 1-sentence point>\\n- **Key Concerns:** <Short, simple 1-sentence point>\\n- **Next Steps:** <Short, simple 1-sentence point>\\n- **<Category>:** <Short point>\\n- **<Category>:** <Short point>\\n- **<Category>:** <Short point>",
+  "intellectual_audio": "<A warm, intellectual conversational paragraph explaining the results designed strictly for an audible voice-over. NO list markers or markdown.>",
   "preventive_guidance": "<Single paragraph of 3 to 5 specific, actionable lifestyle tips directly relevant to the flagged parameters. No diagnoses. No medications.>",
   "doctor_questions": [
     "<Targeted question about the most concerning abnormal value>",
@@ -177,6 +179,10 @@ def _parse_llm_output(raw: str) -> dict[str, Any]:
                 "We were unable to format a structured response at this time. "
                 "Please share this report directly with your doctor for guidance."
             ),
+            "intellectual_audio": (
+                "We were unable to format a structured conversational response at this time. "
+                "Please share this report directly with your doctor for guidance."
+            ),
             "preventive_guidance": (
                 "Maintain a balanced diet, stay physically active, and keep hydrated. "
                 "Schedule a consultation with your physician to review your results."
@@ -194,6 +200,9 @@ def _parse_llm_output(raw: str) -> dict[str, Any]:
     else:
         summary_text = str(summary_data)
 
+    intellectual_audio = str(parsed.get("intellectual_audio", summary_text)).strip()
+    # Failsafe: if the LLM completely ignored the new field, fallback to just reading the summary anyway.
+
     preventive_data = parsed.get("preventive_guidance", [])
     if isinstance(preventive_data, list):
         preventive_text = "\n".join(f"• {item}" for item in preventive_data)
@@ -203,6 +212,7 @@ def _parse_llm_output(raw: str) -> dict[str, Any]:
     # Enforce output schema — trim doctor_questions to exactly 3
     return {
         "summary":              summary_text,
+        "intellectual_audio":   intellectual_audio,
         "preventive_guidance":  preventive_text,
         "doctor_questions":     parsed.get("doctor_questions", [])[:3],
     }

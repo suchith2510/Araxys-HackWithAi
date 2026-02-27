@@ -22,6 +22,7 @@ from app.pdf_extractor import extract_text_from_pdf
 from app.image_extractor import extract_text_from_image
 from app.graph_generator import generate_trend_graph_base64
 from app.schemas import AnalysisResponse, TrendAnalysisResponse
+from app import schemas
 
 # lab_report_analyzer lives at the backend root (one level above app/)
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -204,3 +205,52 @@ async def analyze_trends_endpoint(
     )
 
     return TrendAnalysisResponse(**trend_dict)
+
+
+# ---------------------------------------------------------------------------
+# POST /api/v1/tts — Text-to-Speech generation
+# ---------------------------------------------------------------------------
+
+# Map descriptive languages to gTTS language codes
+_TTS_LANG_MAP = {
+    "English": "en",
+    "Hindi": "hi",
+    "Bengali": "bn",
+    "Telugu": "te",
+    "Marathi": "mr",
+    "Tamil": "ta",
+    "Urdu": "ur",
+    "Gujarati": "gu",
+    "Kannada": "kn",
+    "Malayalam": "ml",
+    # gTTS might not officially support Odia or Punjabi as well as others, 
+    # but we can fallback to 'hi' or closest if it fails, or just pass 'en'
+    "Odia": "hi", 
+    "Punjabi": "pa",
+}
+
+@router.post(
+    "/tts",
+    summary="Generate Text-to-Speech audio for the summary",
+    description="Accepts text and a language string, returns an MP3 audio stream using gTTS.",
+)
+async def generate_tts(request: schemas.TTSRequest):
+    from gtts import gTTS
+    import io
+    from fastapi.responses import StreamingResponse
+
+    target_lang = _TTS_LANG_MAP.get(request.language, "en")
+    
+    try:
+        tts = gTTS(text=request.text, lang=target_lang, slow=False)
+        audio_fp = io.BytesIO()
+        tts.write_to_fp(audio_fp)
+        audio_fp.seek(0)
+        
+        return StreamingResponse(audio_fp, media_type="audio/mpeg")
+    except Exception as exc:
+        logger.error("TTS generation failed: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate audio: {exc}"
+        )
