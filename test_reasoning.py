@@ -4,10 +4,10 @@ test_reasoning.py  (Production)
 End-to-end test for the production reasoning layer.
 
 Requirements:
-    OPENAI_API_KEY must be set in your environment.
+    GROQ_API_KEY must be set in your environment.
 
 Run:
-    set OPENAI_API_KEY=sk-...
+    set GROQ_API_KEY=gsk_...
     python test_reasoning.py
 """
 

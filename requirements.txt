@@ -20,11 +20,9 @@ langchain-text-splitters>=0.3.0
 
 # -- LLM providers --
 langchain-groq>=0.2.0
-langchain-openai>=0.2.0
-openai>=1.40.0
 
-# -- Vector store --
-faiss-cpu>=1.7.4
+# -- Vector store (FAISS with mock embeddings — no OpenAI key needed) --
+faiss-cpu>=1.8.0
 
 # -- Utilities --
-python-dotenv>=1.0.0
+python-dotenv>=1.0.0        # load GROQ_API_KEY from .env file
