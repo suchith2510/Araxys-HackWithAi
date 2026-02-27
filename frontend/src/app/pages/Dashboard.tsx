@@ -102,44 +102,38 @@ export function Dashboard() {
     setTimeout(() => setIsCopied(false), 2000);
   };
 
-  const handleDownloadPDF = async () => {
-    if (!reportRef.current) return;
-    setIsDownloading(true);
-
-    try {
-      const element = reportRef.current;
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-      });
-
-      const imgData = canvas.toDataURL("image/jpeg", 0.98);
-      const pdf = new jsPDF("p", "mm", "a4");
-
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-
-      pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`${patientName.replace(/\s+/g, "_")}_Lab_Report.pdf`);
-
-      toast.success("PDF downloaded successfully!");
-    } catch (error) {
-      console.error("PDF generation failed:", error);
-      toast.error("Failed to generate PDF. Please try again.");
-    } finally {
-      setIsDownloading(false);
-    }
+  const handleDownloadPDF = () => {
+    // We use the browser's native print functionality which seamlessly handles oklab/oklch colors
+    // and layout formatting better than html2canvas for modern Tailwind CSS.
+    window.print();
   };
 
   return (
     <div className="min-h-screen bg-[#f8fafc]">
+      <style>
+        {`
+          @media print {
+            .no-print {
+              display: none !important;
+            }
+            body {
+              background-color: #fff !important;
+            }
+            /* Ensure report container takes full width and no margins */
+            .print-container {
+              max-width: 100% !important;
+              margin: 0 !important;
+              padding: 0 !important;
+            }
+          }
+        `}
+      </style>
       <Toaster />
       <Navbar />
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Header */}
-        <div className="mb-8 flex items-start justify-between flex-wrap gap-4">
+        <div className="mb-8 flex items-start justify-between flex-wrap gap-4 print:hidden">
           <div>
             <h1 className="text-3xl font-bold text-[#0f172a] mb-2">
               Your Health Snapshot
@@ -162,11 +156,10 @@ export function Dashboard() {
             )}
             <button
               onClick={handleDownloadPDF}
-              disabled={isDownloading}
-              className="inline-flex items-center gap-2 bg-[#0f172a] text-white px-5 py-2.5 rounded-lg font-semibold text-sm hover:bg-[#1e293b] hover:shadow-lg transition-all hover:scale-105 disabled:opacity-70 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 bg-[#0f172a] text-white px-5 py-2.5 rounded-lg font-semibold text-sm hover:bg-[#1e293b] hover:shadow-lg transition-all hover:scale-105"
             >
               <Download className="w-4 h-4" />
-              {isDownloading ? "Generating..." : "Download PDF"}
+              Download PDF
             </button>
           </div>
         </div>
