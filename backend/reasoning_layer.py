@@ -62,13 +62,16 @@ STRICT RULES:
 5. Preventive guidance must be lifestyle-only: diet, exercise, hydration, sleep, stress.
 6. Do NOT recommend specific medications or supplements by brand name.
 7. Be empathetic, clear, and reassuring in tone.
-8. Return ONLY a valid JSON object — no markdown, no code fences, no extra text.
+8. The 'summary' field MUST be formatted as a JSON array of strings.
+9. Use extremely simple, non-technical language (6th-grade reading level) that anyone can understand without a medical background.
+10. Return ONLY a valid JSON object — no markdown, no code fences, no extra text.
 """
 
 _USER_PROMPT_TEMPLATE = """\
 === PATIENT INFORMATION ===
-Name        : {patient_name}
-Report Date : {report_date}
+Name            : {patient_name}
+Report Date     : {report_date}
+Target Language : {language}
 
 === FULL LAB RESULTS ===
 {results_table}
@@ -80,12 +83,20 @@ Report Date : {report_date}
 {rag_context}
 
 === YOUR TASK ===
-Write a response for the patient using ONLY the JSON structure below.
+Write a response for the patient strictly in {language} using ONLY the JSON structure below.
 Do not add any text before or after the JSON.
 
 {{
-  "summary": "<4 to 6 sentences. Explain overall health picture in plain language. Mention EACH abnormal parameter by name and its exact value. Use cautious language throughout.>",
-  "preventive_guidance": "<3 to 5 specific, actionable lifestyle tips directly relevant to the flagged parameters. No diagnoses. No medications.>",
+  "summary": [
+    "<A very simple, non-technical breakdown of the results.>",
+    "<Explain what the abnormal parameters mean in everyday language. Mention names and values.>",
+    "<Use cautious language.>"
+  ],
+  "preventive_guidance": [
+    "<At least 3 specific, actionable lifestyle tips directly relevant to the flagged parameters.>",
+    "<Each tip must be on its own line.>",
+    "<No diagnoses. No medications.>"
+  ],
   "doctor_questions": [
     "<Targeted question about the most concerning abnormal value>",
     "<Question about lifestyle or diet changes specific to the patient's flagged results>",
@@ -183,10 +194,22 @@ def _parse_llm_output(raw: str) -> dict[str, Any]:
             ],
         }
 
+    summary_data = parsed.get("summary", [])
+    if isinstance(summary_data, list):
+        summary_text = "\n".join(f"• {item}" for item in summary_data)
+    else:
+        summary_text = str(summary_data)
+
+    preventive_data = parsed.get("preventive_guidance", [])
+    if isinstance(preventive_data, list):
+        preventive_text = "\n".join(f"• {item}" for item in preventive_data)
+    else:
+        preventive_text = str(preventive_data)
+
     # Enforce output schema — trim doctor_questions to exactly 3
     return {
-        "summary":              parsed.get("summary", ""),
-        "preventive_guidance":  parsed.get("preventive_guidance", ""),
+        "summary":              summary_text,
+        "preventive_guidance":  preventive_text,
         "doctor_questions":     parsed.get("doctor_questions", [])[:3],
     }
 
@@ -293,6 +316,7 @@ class LabReportReasoningAgent:
         report_date: str,
         parameters: list[dict],
         rag_context: str,
+        language: str,
     ) -> list:
         """
         Assemble the [SystemMessage, HumanMessage] list for ChatGroq.
@@ -303,6 +327,7 @@ class LabReportReasoningAgent:
         user_content = _USER_PROMPT_TEMPLATE.format(
             patient_name     = patient_name,
             report_date      = report_date,
+            language         = language,
             results_table    = results_table,
             abnormal_summary = abnormal_summary,
             rag_context      = rag_context,
@@ -317,7 +342,7 @@ class LabReportReasoningAgent:
     # Public API
     # ──────────────────────────────────────────────────────────────────────
 
-    def analyze(self, report: dict[str, Any]) -> dict[str, Any]:
+    def analyze(self, report: dict[str, Any], language: str = "English") -> dict[str, Any]:
         """
         Analyse a structured lab report JSON.
 
@@ -365,8 +390,8 @@ class LabReportReasoningAgent:
         rag_context = self._retrieve_context(parameters)
 
         # ── Step 2: Build prompt ──────────────────────────────────────────
-        messages = self._build_prompt(patient_name, report_date, parameters, rag_context)
-        logger.info("Sending request to Groq…")
+        messages = self._build_prompt(patient_name, report_date, parameters, rag_context, language)
+        logger.info("Sending request to Groq for language %s…", language)
 
         # ── Step 3: Single LLM call ───────────────────────────────────────
         response = self._llm.invoke(messages)

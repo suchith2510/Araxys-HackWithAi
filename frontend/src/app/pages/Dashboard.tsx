@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 import {
   Sparkles,
   Leaf,
@@ -10,6 +12,7 @@ import {
   AlertTriangle,
   TrendingUp,
   CheckCircle,
+  Download,
 } from "lucide-react";
 import { Navbar } from "../components/Navbar";
 import { Link } from "react-router";
@@ -47,6 +50,8 @@ export function Dashboard() {
   const [filter, setFilter] = useState<"all" | "abnormal" | "normal">("all");
   const [isCopied, setIsCopied] = useState(false);
   const [fromApi, setFromApi] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const reportRef = useRef<HTMLDivElement>(null);
 
   // Load API response (AnalysisResponse) from localStorage set by Upload page
   useEffect(() => {
@@ -97,6 +102,36 @@ export function Dashboard() {
     setTimeout(() => setIsCopied(false), 2000);
   };
 
+  const handleDownloadPDF = async () => {
+    if (!reportRef.current) return;
+    setIsDownloading(true);
+
+    try {
+      const element = reportRef.current;
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      });
+
+      const imgData = canvas.toDataURL("image/jpeg", 0.98);
+      const pdf = new jsPDF("p", "mm", "a4");
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+      pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`${patientName.replace(/\s+/g, "_")}_Lab_Report.pdf`);
+
+      toast.success("PDF downloaded successfully!");
+    } catch (error) {
+      console.error("PDF generation failed:", error);
+      toast.error("Failed to generate PDF. Please try again.");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#f8fafc]">
       <Toaster />
@@ -115,255 +150,269 @@ export function Dashboard() {
                 : "Comprehensive analysis of your latest health report"}
             </p>
           </div>
-          {hasTrendData && (
-            <Link
-              to="/trends"
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-[#0d9488] to-[#7c3aed] text-white px-5 py-2.5 rounded-lg font-semibold text-sm hover:shadow-lg transition-all hover:scale-105"
+          <div className="flex gap-3 items-center">
+            {hasTrendData && (
+              <Link
+                to="/trends"
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-[#0d9488] to-[#7c3aed] text-white px-5 py-2.5 rounded-lg font-semibold text-sm hover:shadow-lg transition-all hover:scale-105"
+              >
+                <TrendingUp className="w-4 h-4" />
+                View Trend Analysis
+              </Link>
+            )}
+            <button
+              onClick={handleDownloadPDF}
+              disabled={isDownloading}
+              className="inline-flex items-center gap-2 bg-[#0f172a] text-white px-5 py-2.5 rounded-lg font-semibold text-sm hover:bg-[#1e293b] hover:shadow-lg transition-all hover:scale-105 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              <TrendingUp className="w-4 h-4" />
-              View Trend Analysis
-            </Link>
-          )}
+              <Download className="w-4 h-4" />
+              {isDownloading ? "Generating..." : "Download PDF"}
+            </button>
+          </div>
         </div>
 
-        {/* Patient Information Card */}
-        <div className="bg-white rounded-xl shadow-sm border-l-4 border-[#7c3aed] p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-[#0f172a]">Patient Information</h3>
-            <span
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold ${abnormalCount > 0
+        {/* Printable Report Container */}
+        <div ref={reportRef} className="space-y-6">
+          {/* Patient Information Card */}
+          <div className="bg-white rounded-xl shadow-sm border-l-4 border-[#7c3aed] p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-[#0f172a]">Patient Information</h3>
+              <span
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold ${abnormalCount > 0
                   ? "bg-[#fb923c]/10 text-[#fb923c]"
                   : "bg-[#22c55e]/10 text-[#22c55e]"
-                }`}
-            >
-              {abnormalCount > 0 ? (
-                <>
-                  <AlertTriangle className="w-4 h-4" />
-                  {abnormalCount}{" "}
-                  {abnormalCount === 1 ? "value needs" : "values need"} attention
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="w-4 h-4" />
-                  All values normal
-                </>
-              )}
-            </span>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 bg-[#0d9488]/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                <User className="w-5 h-5 text-[#0d9488]" />
-              </div>
-              <div>
-                <div className="text-xs text-[#64748b] mb-1">Patient Name</div>
-                <div className="font-medium text-[#0f172a]">{patientName}</div>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 bg-[#0d9488]/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Calendar className="w-5 h-5 text-[#0d9488]" />
-              </div>
-              <div>
-                <div className="text-xs text-[#64748b] mb-1">Test Date</div>
-                <div className="font-medium text-[#0f172a]">{reportDate}</div>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 bg-[#0d9488]/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                <FileText className="w-5 h-5 text-[#0d9488]" />
-              </div>
-              <div>
-                <div className="text-xs text-[#64748b] mb-1">Parameters</div>
-                <div className="font-medium text-[#0f172a]">{labData.length} extracted</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Parameters Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-[#e2e8f0] mb-6 overflow-hidden">
-          <div className="border-b border-[#e2e8f0] px-6 py-4 bg-[#f8fafc]">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-[#64748b]">Filter:</span>
-              <button
-                onClick={() => setFilter("all")}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${filter === "all"
-                    ? "bg-[#0d9488] text-white"
-                    : "bg-white text-[#64748b] hover:bg-[#e2e8f0]"
                   }`}
               >
-                All ({labData.length})
-              </button>
-              <button
-                onClick={() => setFilter("abnormal")}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${filter === "abnormal"
-                    ? "bg-[#ef4444] text-white"
-                    : "bg-white text-[#64748b] hover:bg-[#e2e8f0]"
-                  }`}
-              >
-                Abnormal Only ({abnormalCount})
-              </button>
-              <button
-                onClick={() => setFilter("normal")}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${filter === "normal"
-                    ? "bg-[#22c55e] text-white"
-                    : "bg-white text-[#64748b] hover:bg-[#e2e8f0]"
-                  }`}
-              >
-                Normal Only ({labData.length - abnormalCount})
-              </button>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-[#0d9488] text-white">
-                  <th className="text-left px-6 py-4 font-bold">Parameter</th>
-                  <th className="text-left px-6 py-4 font-bold">Value</th>
-                  <th className="text-left px-6 py-4 font-bold">Reference Range</th>
-                  <th className="text-left px-6 py-4 font-bold">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredData.map((item, index) => {
-                  const isAbnormal = item.status !== "Normal";
-                  const bgColor = isAbnormal ? "bg-[#ef4444]/10" : "bg-white";
-                  const borderColor = isAbnormal ? "border-l-4 border-l-[#ef4444]" : "";
-                  const badgeColor = isAbnormal ? "text-[#ef4444]" : "text-[#22c55e]";
-                  const badgeBg = isAbnormal ? "bg-[#ef4444]/10" : "bg-[#22c55e]/10";
-
-                  return (
-                    <tr
-                      key={index}
-                      className={`border-b border-[#e2e8f0] last:border-b-0 ${bgColor} ${borderColor} hover:shadow-[inset_3px_0_0_0_#0d9488] transition-shadow`}
-                    >
-                      <td className="px-6 py-4 font-medium text-[#0f172a]">{item.name}</td>
-                      <td className="px-6 py-4 text-[#0f172a] font-mono">
-                        {item.value} {item.unit}
-                      </td>
-                      <td className="px-6 py-4 text-[#64748b]">
-                        {item.reference_low} – {item.reference_high} {item.unit}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${badgeColor} ${badgeBg}`}
-                        >
-                          {isAbnormal && <AlertTriangle className="w-3 h-3" />}
-                          {item.status.toUpperCase()}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Two Column Layout */}
-        <div className="grid lg:grid-cols-2 gap-6 mb-6">
-          {/* AI Health Summary */}
-          <div className="bg-[#7c3aed]/5 rounded-xl border border-[#7c3aed]/20 overflow-hidden">
-            <div className="bg-[#7c3aed] px-6 py-4 flex items-center justify-between">
-              <h3 className="font-bold text-white">What Your Results Mean</h3>
-              <span className="inline-flex items-center gap-1 bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-medium text-white">
-                <Sparkles className="w-3 h-3" />
-                AI Generated
+                {abnormalCount > 0 ? (
+                  <>
+                    <AlertTriangle className="w-4 h-4" />
+                    {abnormalCount}{" "}
+                    {abnormalCount === 1 ? "value needs" : "values need"} attention
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4" />
+                    All values normal
+                  </>
+                )}
               </span>
             </div>
-            <div className="p-6">
-              {summary ? (
-                <p className="text-[#0f172a] leading-relaxed">{summary}</p>
-              ) : (
-                <p className="text-[#64748b] italic leading-relaxed">
-                  Upload a lab report to get an AI-generated summary of your results.
-                </p>
-              )}
-              <p className="text-xs text-[#64748b] italic border-t border-[#7c3aed]/20 pt-4 mt-4">
-                This is not medical advice. Always consult your doctor.
-              </p>
-            </div>
-          </div>
 
-          {/* Preventive Guidance */}
-          <div className="bg-white rounded-xl shadow-sm border border-[#e2e8f0] overflow-hidden">
-            <div className="bg-[#0d9488] px-6 py-4 flex items-center gap-2">
-              <Leaf className="w-5 h-5 text-white" />
-              <h3 className="font-bold text-white">What You Can Do</h3>
-            </div>
-            <div className="p-6">
-              {preventiveGuidance ? (
-                <p className="text-[#0f172a] leading-relaxed whitespace-pre-line">
-                  {preventiveGuidance}
-                </p>
-              ) : (
-                <p className="text-[#64748b] italic leading-relaxed">
-                  Upload a lab report to get personalized preventive guidance from AI.
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Doctor Questions */}
-        <div className="bg-white rounded-xl shadow-sm border-l-4 border-[#7c3aed] p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <MessageCircle className="w-5 h-5 text-[#7c3aed]" />
-                <h3 className="font-bold text-[#0f172a]">
-                  Ask Your Doctor These Questions
-                </h3>
-              </div>
-              <p className="text-xs text-[#64748b]">
-                {doctorQuestions.length > 0
-                  ? "Generated by AI based on your lab results"
-                  : "Upload a report to generate personalized questions"}
-              </p>
-            </div>
-            {doctorQuestions.length > 0 && (
-              <button
-                onClick={handleCopyQuestions}
-                className="flex items-center gap-2 px-4 py-2 bg-[#0d9488] text-white rounded-lg hover:bg-[#0d9488]/90 transition-colors text-sm font-medium"
-              >
-                <Copy className="w-4 h-4" />
-                {isCopied ? "Copied ✓" : "Copy All Questions"}
-              </button>
-            )}
-          </div>
-
-          <div className="space-y-3">
-            {doctorQuestions.length > 0 ? (
-              doctorQuestions.map((question: string, index: number) => (
-                <div
-                  key={index}
-                  className="flex items-start gap-3 p-4 bg-[#f8fafc] rounded-lg border border-[#e2e8f0]"
-                >
-                  <span className="flex items-center justify-center w-6 h-6 bg-[#7c3aed] text-white rounded-full text-xs font-bold flex-shrink-0">
-                    {index + 1}
-                  </span>
-                  <span className="text-[#0f172a] leading-relaxed">{question}</span>
+            <div className="grid md:grid-cols-3 gap-6">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 bg-[#0d9488]/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <User className="w-5 h-5 text-[#0d9488]" />
                 </div>
-              ))
-            ) : (
-              <div className="text-center py-6 text-[#64748b] italic text-sm">
-                No doctor questions yet. Upload a lab report to generate personalized questions.
+                <div>
+                  <div className="text-xs text-[#64748b] mb-1">Patient Name</div>
+                  <div className="font-medium text-[#0f172a]">{patientName}</div>
+                </div>
               </div>
-            )}
-          </div>
-        </div>
 
-        {/* Disclaimer Footer */}
-        <div className="mt-10 pb-6 text-center">
-          <p className="text-xs text-[#94a3b8]">
-            This is not a medical diagnosis. Always consult your doctor.
-          </p>
-        </div>
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 bg-[#0d9488]/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Calendar className="w-5 h-5 text-[#0d9488]" />
+                </div>
+                <div>
+                  <div className="text-xs text-[#64748b] mb-1">Test Date</div>
+                  <div className="font-medium text-[#0f172a]">{reportDate}</div>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 bg-[#0d9488]/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <FileText className="w-5 h-5 text-[#0d9488]" />
+                </div>
+                <div>
+                  <div className="text-xs text-[#64748b] mb-1">Parameters</div>
+                  <div className="font-medium text-[#0f172a]">{labData.length} extracted</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Parameters Table */}
+          <div className="bg-white rounded-xl shadow-sm border border-[#e2e8f0] mb-6 overflow-hidden">
+            <div className="border-b border-[#e2e8f0] px-6 py-4 bg-[#f8fafc]">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-[#64748b]">Filter:</span>
+                <button
+                  onClick={() => setFilter("all")}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${filter === "all"
+                    ? "bg-[#0d9488] text-white"
+                    : "bg-white text-[#64748b] hover:bg-[#e2e8f0]"
+                    }`}
+                >
+                  All ({labData.length})
+                </button>
+                <button
+                  onClick={() => setFilter("abnormal")}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${filter === "abnormal"
+                    ? "bg-[#ef4444] text-white"
+                    : "bg-white text-[#64748b] hover:bg-[#e2e8f0]"
+                    }`}
+                >
+                  Abnormal Only ({abnormalCount})
+                </button>
+                <button
+                  onClick={() => setFilter("normal")}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${filter === "normal"
+                    ? "bg-[#22c55e] text-white"
+                    : "bg-white text-[#64748b] hover:bg-[#e2e8f0]"
+                    }`}
+                >
+                  Normal Only ({labData.length - abnormalCount})
+                </button>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-[#0d9488] text-white">
+                    <th className="text-left px-6 py-4 font-bold">Parameter</th>
+                    <th className="text-left px-6 py-4 font-bold">Value</th>
+                    <th className="text-left px-6 py-4 font-bold">Reference Range</th>
+                    <th className="text-left px-6 py-4 font-bold">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredData.map((item, index) => {
+                    const isAbnormal = item.status !== "Normal";
+                    const bgColor = isAbnormal ? "bg-[#ef4444]/10" : "bg-white";
+                    const borderColor = isAbnormal ? "border-l-4 border-l-[#ef4444]" : "";
+                    const badgeColor = isAbnormal ? "text-[#ef4444]" : "text-[#22c55e]";
+                    const badgeBg = isAbnormal ? "bg-[#ef4444]/10" : "bg-[#22c55e]/10";
+
+                    return (
+                      <tr
+                        key={index}
+                        className={`border-b border-[#e2e8f0] last:border-b-0 ${bgColor} ${borderColor} hover:shadow-[inset_3px_0_0_0_#0d9488] transition-shadow`}
+                      >
+                        <td className="px-6 py-4 font-medium text-[#0f172a]">{item.name}</td>
+                        <td className="px-6 py-4 text-[#0f172a] font-mono">
+                          {item.value} {item.unit}
+                        </td>
+                        <td className="px-6 py-4 text-[#64748b]">
+                          {item.reference_low} – {item.reference_high} {item.unit}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${badgeColor} ${badgeBg}`}
+                          >
+                            {isAbnormal && <AlertTriangle className="w-3 h-3" />}
+                            {item.status.toUpperCase()}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Two Column Layout */}
+          <div className="grid lg:grid-cols-2 gap-6 mb-6">
+            {/* AI Health Summary */}
+            <div className="bg-[#7c3aed]/5 rounded-xl border border-[#7c3aed]/20 overflow-hidden">
+              <div className="bg-[#7c3aed] px-6 py-4 flex items-center justify-between">
+                <h3 className="font-bold text-white">What Your Results Mean</h3>
+                <span className="inline-flex items-center gap-1 bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-medium text-white">
+                  <Sparkles className="w-3 h-3" />
+                  AI Generated
+                </span>
+              </div>
+              <div className="p-6">
+                {summary ? (
+                  <p className="text-[#0f172a] leading-relaxed whitespace-pre-line">{summary}</p>
+                ) : (
+                  <p className="text-[#64748b] italic leading-relaxed">
+                    Upload a lab report to get an AI-generated summary of your results.
+                  </p>
+                )}
+                <p className="text-xs text-[#64748b] italic border-t border-[#7c3aed]/20 pt-4 mt-4">
+                  This is not medical advice. Always consult your doctor.
+                </p>
+              </div>
+            </div>
+
+            {/* Preventive Guidance */}
+            <div className="bg-white rounded-xl shadow-sm border border-[#e2e8f0] overflow-hidden">
+              <div className="bg-[#0d9488] px-6 py-4 flex items-center gap-2">
+                <Leaf className="w-5 h-5 text-white" />
+                <h3 className="font-bold text-white">What You Can Do</h3>
+              </div>
+              <div className="p-6">
+                {preventiveGuidance ? (
+                  <p className="text-[#0f172a] leading-relaxed whitespace-pre-line">
+                    {preventiveGuidance}
+                  </p>
+                ) : (
+                  <p className="text-[#64748b] italic leading-relaxed">
+                    Upload a lab report to get personalized preventive guidance from AI.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Doctor Questions */}
+          <div className="bg-white rounded-xl shadow-sm border-l-4 border-[#7c3aed] p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <MessageCircle className="w-5 h-5 text-[#7c3aed]" />
+                  <h3 className="font-bold text-[#0f172a]">
+                    Ask Your Doctor These Questions
+                  </h3>
+                </div>
+                <p className="text-xs text-[#64748b]">
+                  {doctorQuestions.length > 0
+                    ? "Generated by AI based on your lab results"
+                    : "Upload a report to generate personalized questions"}
+                </p>
+              </div>
+              {doctorQuestions.length > 0 && (
+                <button
+                  onClick={handleCopyQuestions}
+                  className="flex items-center gap-2 px-4 py-2 bg-[#0d9488] text-white rounded-lg hover:bg-[#0d9488]/90 transition-colors text-sm font-medium"
+                >
+                  <Copy className="w-4 h-4" />
+                  {isCopied ? "Copied ✓" : "Copy All Questions"}
+                </button>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              {doctorQuestions.length > 0 ? (
+                doctorQuestions.map((question: string, index: number) => (
+                  <div
+                    key={index}
+                    className="flex items-start gap-3 p-4 bg-[#f8fafc] rounded-lg border border-[#e2e8f0]"
+                  >
+                    <span className="flex items-center justify-center w-6 h-6 bg-[#7c3aed] text-white rounded-full text-xs font-bold flex-shrink-0">
+                      {index + 1}
+                    </span>
+                    <span className="text-[#0f172a] leading-relaxed">{question}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-6 text-[#64748b] italic text-sm">
+                  No doctor questions yet. Upload a lab report to generate personalized questions.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Disclaimer Footer */}
+          <div className="mt-10 pb-6 text-center">
+            <p className="text-xs text-[#94a3b8]">
+              This is not a medical diagnosis. Always consult your doctor.
+            </p>
+          </div>
+
+        </div> {/* End of Printable Container */}
       </div>
     </div>
   );

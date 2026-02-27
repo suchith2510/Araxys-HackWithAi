@@ -15,7 +15,7 @@ import sys
 import os
 from typing import Any
 
-from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
 
 from app.llm_service import analyze_report_text
 from app.pdf_extractor import extract_text_from_pdf
@@ -89,7 +89,7 @@ def _get_image_mime(file: UploadFile) -> str:
     }.get(ext, "image/jpeg")
 
 
-async def _run_pipeline(file: UploadFile) -> dict[str, Any]:
+async def _run_pipeline(file: UploadFile, language: str = "English") -> dict[str, Any]:
     """Run the full pipeline on a single file. Returns a plain dict."""
     _validate_upload(file)
 
@@ -131,7 +131,7 @@ async def _run_pipeline(file: UploadFile) -> dict[str, Any]:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                             detail="AI reasoning service unavailable. Check GROQ_API_KEY.")
     try:
-        insights = _reasoning_agent.analyze(report_dict)
+        insights = _reasoning_agent.analyze(report_dict, language=language)
     except Exception as exc:
         logger.exception("Reasoning layer failed.")
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY,
@@ -157,9 +157,10 @@ async def _run_pipeline(file: UploadFile) -> dict[str, Any]:
 )
 async def upload_report(
     file: UploadFile = File(..., description="Lab report — PDF or image (JPG, PNG, TIFF, BMP, WEBP)"),
+    language: str = Form("English", description="Target language to output AI summary in")
 ) -> AnalysisResponse:
-    result = await _run_pipeline(file)
-    logger.info("upload-report: processed report for '%s'.", result.get("patient_name"))
+    result = await _run_pipeline(file, language)
+    logger.info("upload-report: processed report for '%s' in %s.", result.get("patient_name"), language)
     return AnalysisResponse(**result)
 
 
@@ -181,9 +182,10 @@ async def upload_report(
 async def analyze_trends_endpoint(
     older_report: UploadFile = File(..., description="The OLDER lab report (PDF or image)"),
     newer_report: UploadFile = File(..., description="The NEWER lab report (PDF or image)"),
+    language: str = Form("English", description="Target language to output AI summary in")
 ) -> TrendAnalysisResponse:
-    older_dict = await _run_pipeline(older_report)
-    newer_dict = await _run_pipeline(newer_report)
+    older_dict = await _run_pipeline(older_report, language)
+    newer_dict = await _run_pipeline(newer_report, language)
 
     older = classify_report_statuses(older_dict)
     newer = classify_report_statuses(newer_dict)

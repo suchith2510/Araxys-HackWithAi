@@ -7,6 +7,7 @@ import {
   Calendar,
   Shield,
   AlertCircle,
+  Globe2,
 } from "lucide-react";
 import { useNavigate } from "react-router";
 import { Navbar } from "../components/Navbar";
@@ -46,6 +47,7 @@ export function Upload() {
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [serviceUnavailable, setServiceUnavailable] = useState(false);
+  const [language, setLanguage] = useState("English");
   const navigate = useNavigate();
 
   // Health check on mount — GET /health
@@ -144,6 +146,7 @@ export function Upload() {
         const trendForm = new FormData();
         trendForm.append("older_report", olderFile.file);
         trendForm.append("newer_report", newerFile.file);
+        trendForm.append("language", language);
 
         const trendRes = await fetch(`${API_BASE}/api/v1/analyze-trends`, {
           method: "POST",
@@ -170,6 +173,7 @@ export function Upload() {
         // Use the newer report analysis by running single upload call for it
         const singleForm = new FormData();
         singleForm.append("file", newerFile.file);
+        singleForm.append("language", language);
         const singleRes = await fetch(`${API_BASE}/api/v1/upload-report`, {
           method: "POST",
           body: singleForm,
@@ -183,6 +187,7 @@ export function Upload() {
         // ── Single file: standard analysis ──
         const formData = new FormData();
         formData.append("file", files[0].file);
+        formData.append("language", language);
 
         const response = await fetch(`${API_BASE}/api/v1/upload-report`, {
           method: "POST",
@@ -303,7 +308,35 @@ export function Upload() {
               <p className="text-sm text-[#0f172a] leading-relaxed">
                 <strong className="text-[#7c3aed]">Trend Analysis:</strong> Upload 2
                 reports from different dates to compare your health metrics over time.
-                Set the report dates below to ensure correct ordering.
+              </p>
+            </div>
+
+            {/* Language Selection */}
+            <div className="mt-6">
+              <label className="block text-sm font-bold text-[#0f172a] mb-2 flex items-center gap-2">
+                <Globe2 className="w-4 h-4 text-[#0d9488]" />
+                Select Output Language
+              </label>
+              <select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                className="w-full bg-white border border-[#e2e8f0] text-[#0f172a] text-sm rounded-lg focus:ring-[#0d9488] focus:border-[#0d9488] block p-2.5"
+              >
+                <option value="English">English</option>
+                <option value="Hindi">Hindi (हिंदी)</option>
+                <option value="Bengali">Bengali (বাংলা)</option>
+                <option value="Telugu">Telugu (తెలుగు)</option>
+                <option value="Marathi">Marathi (मराठी)</option>
+                <option value="Tamil">Tamil (தமிழ்)</option>
+                <option value="Urdu">Urdu (اردو)</option>
+                <option value="Gujarati">Gujarati (ગુજરાતી)</option>
+                <option value="Kannada">Kannada (ಕನ್ನಡ)</option>
+                <option value="Odia">Odia (ଓଡ଼ିଆ)</option>
+                <option value="Malayalam">Malayalam (മലയാളം)</option>
+                <option value="Punjabi">Punjabi (ਪੰਜਾਬੀ)</option>
+              </select>
+              <p className="text-xs text-[#64748b] mt-2">
+                The AI summary and guidance will be generated in your preferred language.
               </p>
             </div>
           </div>
