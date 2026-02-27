@@ -23,7 +23,6 @@ from typing import List
 from langchain_core.embeddings import Embeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
-from langchain_openai import OpenAIEmbeddings
 
 
 # ---------------------------------------------------------------------------
@@ -94,11 +93,12 @@ class RAGPipeline:
         if use_mock_embeddings is None:
             use_mock_embeddings = not bool(os.getenv("OPENAI_API_KEY"))
 
-        self._embeddings = (
-            _MockEmbeddings()
-            if use_mock_embeddings
-            else OpenAIEmbeddings(model="text-embedding-3-small")
-        )
+        if use_mock_embeddings:
+            self._embeddings = _MockEmbeddings()
+        else:
+            # Lazy import — only required when OPENAI_API_KEY is present
+            from langchain_openai import OpenAIEmbeddings  # noqa: PLC0415
+            self._embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
 
         self._vector_store: FAISS = self._build_index(chunk_size, chunk_overlap)
         print(

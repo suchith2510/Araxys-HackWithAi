@@ -30,7 +30,7 @@ import logging
 import os
 from typing import Any
 
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_groq import ChatGroq
 
 from rag_pipeline import RAGPipeline
@@ -295,7 +295,7 @@ class LabReportReasoningAgent:
         rag_context: str,
     ) -> list:
         """
-        Assemble the [system, user] message list for ChatOpenAI.
+        Assemble the [SystemMessage, HumanMessage] list for ChatGroq.
         """
         results_table    = _build_results_table(parameters)
         abnormal_summary = _build_abnormal_summary(parameters)
@@ -309,8 +309,8 @@ class LabReportReasoningAgent:
         )
 
         return [
-            {"role": "system", "content": _SYSTEM_PROMPT},
-            {"role": "user",   "content": user_content},
+            SystemMessage(content=_SYSTEM_PROMPT),
+            HumanMessage(content=user_content),
         ]
 
     # ──────────────────────────────────────────────────────────────────────
@@ -366,7 +366,7 @@ class LabReportReasoningAgent:
 
         # ── Step 2: Build prompt ──────────────────────────────────────────
         messages = self._build_prompt(patient_name, report_date, parameters, rag_context)
-        logger.info("Sending request to OpenAI…")
+        logger.info("Sending request to Groq…")
 
         # ── Step 3: Single LLM call ───────────────────────────────────────
         response = self._llm.invoke(messages)
