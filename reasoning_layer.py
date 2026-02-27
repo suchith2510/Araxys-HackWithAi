@@ -201,7 +201,7 @@ class LabReportReasoningAgent:
 
     Workflow
     --------
-    1. Validate GROQ_API_KEY is set (raises RuntimeError otherwise).
+    1. Validate OPENAI_API_KEY is set (raises RuntimeError otherwise).
     2. Build FAISS RAG index from the medical knowledge base.
     3. On analyze():
        a. Identify abnormal parameters from the report JSON.
@@ -209,7 +209,7 @@ class LabReportReasoningAgent:
        c. Retrieve top-k relevant document chunks from FAISS.
        d. Log retrieved snippets for debugging.
        e. Format the full LLM prompt (system + user).
-       f. Call ChatGroq once (single completion).
+       f. Call ChatOpenAI once (single completion).
        g. Parse and return the structured JSON response.
 
     Parameters
@@ -217,7 +217,7 @@ class LabReportReasoningAgent:
     knowledge_file : str
         Path to the plain-text medical knowledge base.
     model : str
-        Groq model to use (default: "llama-3.3-70b-versatile").
+        OpenAI chat model to use (default: "gpt-4o-mini").
     temperature : float
         Sampling temperature — lower is more deterministic (default: 0.2).
     top_k : int

@@ -96,7 +96,7 @@ class RAGPipeline:
         if use_mock_embeddings:
             self._embeddings = _MockEmbeddings()
         else:
-            # Lazy import — only needed when OPENAI_API_KEY is present
+            # Lazy import — only required when OPENAI_API_KEY is present
             from langchain_openai import OpenAIEmbeddings  # noqa: PLC0415
             self._embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
 
