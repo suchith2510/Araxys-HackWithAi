@@ -10,6 +10,9 @@ Interactive docs:
 
 import logging
 
+from dotenv import load_dotenv
+load_dotenv()  # loads GROQ_API_KEY (and others) from .env automatically
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
